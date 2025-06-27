@@ -122,7 +122,8 @@ ui <- fluidPage(
         menuItem("Coeficients: Location-Wise", tabName = "locationWise", icon = icon("compass")),
         menuItem("Variable Importance", tabName = "vips", icon = icon("ranking-star")),
         menuItem("Normality and Stationarity Tests", tabName = "validation_tab", icon = icon("vial")),
-        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot"))
+        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot")),
+        menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
       )
     ),
     dashboardBody(
@@ -290,6 +291,7 @@ ui <- fluidPage(
               });
           "))
       ),
+      
       box(
         title = "A Comparative Analysis of Robust Penalized Estimators for Periodic Time Series",
         status = "primary",
@@ -384,6 +386,16 @@ ui <- fluidPage(
                 fluidRow(
                   box(title = "Loop Detector Locations", status = "primary", solidHeader = TRUE, width = 12,
                       leafletOutput("map_output", height = "600px")
+                  )
+                )
+        ),
+        tabItem(tabName = "pdf",
+                fluidRow(
+                  box(title = "Thesis PDF: Detailed report of the afore-shown analysis", status = "primary", solidHeader = TRUE, width = 12,
+                      tags$iframe(
+                        style = "height:800px; width:100%; border:none;",
+                        src = "A_Comparative_Analysis_of_Robust_Penalized_Estimators_for_Periodic_Time_Series.pdf"
+                      )
                   )
                 )
         )
@@ -1303,3 +1315,6 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
+
+# library(getip)
+# runApp("shinyApp.R",host = "147.52.205.205",port = 1997) # IPv4 Address. 192.168.1.22. the uoc server is 147.52.205.205
