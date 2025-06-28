@@ -14,6 +14,8 @@ source("Estimations.R")
 loop.detect <- as.vector(sapply(routes, function(x) strsplit(x, "_")[[1]][1]))
 app_methods <- c("MTE", "LSA")
 criteria <- c("AIC", "BIC")
+lm.reg  <- lm(paste0("L101_volume", f), data = data)
+X <- as.matrix(cbind("(Intercept)"=1,lm.reg$model[,-1]))
 
 extract_coef_helper <- function(extract = c("Mean", "2.5q", "97.5q","Median"),coef_ = c("MEB", "Actual", "ADL1LASSO")){
   func <- function(x, extr) {
@@ -466,7 +468,7 @@ server <- function(input, output, session) {
             crit = selected_criterion,
             show_ = "Coefficients"
           )
-          all_coef_matrices[[iter]] <- coefs_df[,1]
+          all_coef_matrices[[iter]] <- rowMeans(coefs_df[,-21])
         }
         combined_values <- do.call(cbind, all_coef_matrices)
         result_matrix[, 1:num_locations] <- combined_values
@@ -647,8 +649,14 @@ server <- function(input, output, session) {
   })
   
   reactive_acf_pacf <- reactive({
-    residuals_list <- as.data.frame(reactive_res())
-    pred_errors_list <- as.data.frame(reactive_error())
+    meb <- rowMeans(plotData_meb(location, method, crit, show_="Coefficients")[,1:20])
+    actual <- plotData(location,method,crit, F,show_="Coefficients")[,input$route]
+    adl1lasso <- plotData(location,method,crit, T,show_="Coefficients")[,1]
+    dt <- data[,paste0(input$route,"_volume")]
+    test_rows <- (length(dt)/2 + 1):(length(dt)*3/4)
+    
+    residuals_list <- data.frame(MEB = c(dt[train_rows]-meb%*%t(X[train_rows,])), Actual = c(dt[train_rows]-actual%*%t(X[train_rows,])), adl1lasso = c(dt[train_rows]-adl1lasso%*%t(X[train_rows,])))
+    pred_errors_list <- data.frame(MEB = c(dt[test_rows]-meb%*%t(X[test_rows,])), Actual = c(dt[test_rows]-actual%*%t(X[test_rows,])), adl1lasso = c(dt[test_rows]-adl1lasso%*%t(X[test_rows,])))
     
     list(
       residuals = residuals_list,
@@ -947,8 +955,8 @@ server <- function(input, output, session) {
     n_vars <- length(acf_data$residuals)
     res_df <- data.frame(acf_data$residuals)
     pred_df <- data.frame(acf_data$prediction_errors)
-    res2acf  <- cbind(colMeans(res_df[,1:20]),res_df[,21],res_df[,22])
-    pred2acf <- cbind(colMeans(pred_df[,1:20]),pred_df[,21],pred_df[,22])
+    res2acf  <- cbind(res_df[,1],res_df[,2],res_df[,3])
+    pred2acf <- cbind(pred_df[,1],pred_df[,2],pred_df[,3])
     names(res2acf) <- names(pred2acf) <- c("MEB_AVG", "ACTUAL", "ADL1LASSO")
     for (i in 1:3) {
       acf_res <- acf(res2acf[,i], plot = FALSE)
@@ -1317,4 +1325,4 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 # library(getip)
-# runApp("shinyApp.R",host = "147.52.205.205",port = 1997) # IPv4 Address. 192.168.1.22. the uoc server is 147.52.205.205
+runApp("shinyApp.R",host = "139.91.62.83",port = 1997) # IPv4 Address. 192.168.1.22. the uoc server is 147.52.205.205

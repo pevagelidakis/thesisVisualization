@@ -51,6 +51,25 @@ colnames(data) <- c("L101_volume",    "L102_volume",    "L103_volume",    "L104_
                     "L107_occupancy", "L108_occupancy", "DAY",            "TIME")
 n_row = sum(data$DAY == data$DAY[1])*5
 settfm(data, DATE = fixDate(data$DAY,year=2000))
+# tsdata <- data %$% xts(cbind(L101_volume, L101_occupancy, L102_volume, L102_occupancy,
+#                              L103_volume, L103_occupancy, L104_volume, L104_occupancy,
+#                              L106_volume, L106_occupancy, L107_volume, L107_occupancy,
+#                              L108_volume, L108_occupancy),order.by = DATE, Frequency = n_row)
+# plot_list <- list()
+# for (loc in Filter(function(x) grepl("L10._volume",x), colnames(data))){
+#   df <- data[c(loc,"DATE")]
+#   names(df) <- c("Y1","DATE")
+#   plot_list[[loc]] <- ggplot(df, aes(x = DATE, y = Y1)) +
+#                           geom_line(color = "navyblue") +
+#                           labs(title = paste0("Plot of Traffic Volume of ",strsplit(loc,"_")[[1]][1]), x = "Date", y = "Volume") +
+#                           theme_minimal()
+# }
+# library(gridExtra)
+# num_plots <- length(plot_list)
+# num_cols <- 2  
+# num_rows <- ceiling(num_plots / num_cols)
+# dev.new()
+# grid.arrange(grobs = plot_list, nrow = num_rows, ncol = num_cols)
 
 # Construct the regressors respecting Fourier Harmonics. We need the first 500. 
 # High harmonic frequencies seems to have low impact.  
@@ -75,13 +94,16 @@ train_rows <- 1:(n_row*2)
 
 # Create MEBoot samples and store them locally.
 # setwd(choose.dir())
-# Niter <- 20
-# for (selRoute in routes){
-#   cat("FOR",selRoute,"\n")
-#   setwd(strsplit(selRoute,"_")[[1]][1])
-#   MEB = meboot(data[[selRoute]],reps=Niter)$ensemble
-#   save(MEB,file= "synth_dataset.RData")
-# }
+genData <- function(Niter=20){
+  for (selRoute in routes){
+    cat("FOR",selRoute,"\n")
+    setwd(strsplit(selRoute,"_")[[1]][1])
+    MEB = meboot(data[[selRoute]],reps=Niter)$ensemble
+    save(MEB,file= "synth_dataset.RData")
+  }
+}
+# genData(20)
+
 doProcess <- function(){
   # Set up the communication with my phone and all the proper configurations for the L1/L2 LSA/MTE procedures on
   # MEBoot samples, extract coefficients using AIC/BIC criterion and store them locally.
@@ -572,7 +594,7 @@ doProcess <- function(){
   methods <- Filter(function(x) !grepl("AdL1Lasso",x),list.files("L101",pattern="^coef.*\\.RData$"))
   
   plan(multisession)  
-  # AD_LAD_LASSO <- function(sel_route, methods, X, data, coeff_names,
+  {# AD_LAD_LASSO <- function(sel_route, methods, X, data, coeff_names,
   #                                    train_rows, lambda_sequence, crits, min_crit_fun) {
   #   y <- data[[sel_route]]
   #   str_sel_route <- strsplit(sel_route, "_")[[1]][1]
@@ -635,6 +657,7 @@ doProcess <- function(){
   #     min_crit_fun = min_crit_fun
   #   )
   # },7 )
+    }
   
   AD_LAD_LASSO_CV <- function(sel_route, methods, X, data, coeff_names,
                               train_rows, lambda_sequence, crits, min_crit_fun,
