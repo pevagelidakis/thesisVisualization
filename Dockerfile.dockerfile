@@ -5,11 +5,14 @@ FROM rocker/shiny:latest
 RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     libssl-dev \
-    libxml2-dev
+    libxml2-dev \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev
 
 # Install R packages required by your app
 # Modify this line to match the packages your app uses
-RUN R -e "install.packages(c('shiny', 'shinydashboard', 'plotly', 'leaflet', 'reshape2', 'leaflet', 'shinyWidgets', 'Polychrome', 'dplyr', 'tseries', 'DT', 'collapse', 'magrittr', 'tseries', 'lmtest', 'sandwich', 'jtools', 'xts', 'ggfortify', 'lubridate', 'MTE', 'quantreg', 'meboot', 'foreach', 'doParallel', 'future', 'furrr', 'purrr', 'rqPen'), repos='https://cloud.r-project.org')"
+RUN R -e "install.packages(c('shiny', 'shinydashboard', 'plotly', 'leaflet', 'reshape2', 'leaflet', 'shinyWidgets', 'Polychrome', 'dplyr', 'tseries', 'DT', 'collapse', 'magrittr', 'tseries', 'lmtest', 'sandwich', 'jtools', 'xts', 'ggfortify', 'lubridate', 'MTE', 'quantreg', 'meboot', 'foreach', 'doParallel', 'future', 'furrr', 'purrr', 'rqPen'), Ncpus = 4, repos='https://cloud.r-project.org')"
 
 # Copy your app into the Docker container
 COPY . /srv/shiny-server/
