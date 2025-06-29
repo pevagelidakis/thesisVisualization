@@ -124,8 +124,8 @@ ui <- fluidPage(
         menuItem("Coeficients: Location-Wise", tabName = "locationWise", icon = icon("compass")),
         menuItem("Variable Importance", tabName = "vips", icon = icon("ranking-star")),
         menuItem("Normality and Stationarity Tests", tabName = "validation_tab", icon = icon("vial")),
-        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot")),
-        menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
+        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot"))#,
+        # menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
       )
     ),
     dashboardBody(
