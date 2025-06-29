@@ -15,7 +15,7 @@ RUN R -e "install.packages(c('shiny', 'shinydashboard', 'plotly', 'leaflet', 're
 COPY . /srv/shiny-server/
 
 # Expose Shiny default port
-EXPOSE 3838
+EXPOSE 8264
 
 # Run Shiny Server
 CMD ["/usr/bin/shiny-server"]

@@ -1325,4 +1325,4 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 # library(getip)
-runApp("shinyApp.R",host = "139.91.62.83",port = 1997) # IPv4 Address. 192.168.1.22. the uoc server is 147.52.205.205
+# runApp("shinyApp.R",host = "139.91.62.83",port = 1997) # IPv4 Address. 192.168.1.22. the uoc server is 147.52.205.205
