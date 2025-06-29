@@ -11,7 +11,7 @@
   library(lubridate)
   library(MTE)
   library(quantreg)
-  source("lsa.R")
+  source("lsa.r")
   library(meboot)
   library(foreach)
   library(doParallel)
