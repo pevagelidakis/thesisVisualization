@@ -899,7 +899,7 @@ plot_actual_data <- function(){
   num_rows <- ceiling(num_plots / num_cols)
   dev.new()
   grid.arrange(grobs = plot_list, nrow = num_rows, ncol = num_cols)
-  print("Hit <Enter> to continue:")
+  readLine("Hit <Enter> to continue:")
   dev.off()
 }
 
@@ -985,11 +985,13 @@ plot_predVSactual <- function(){
       )
     plot_list[[loc]] <- p 
   }
+  dev.new()
   do.call(grid.arrange, c(plot_list[grep("L10[1-4]",names(plot_list),value=T)], ncol = 2))
-  print("Hit <Enter> to see the next plots:")
+  readline("Hit <Enter> to see the next plots:")
   do.call(grid.arrange, c(plot_list[grep("L10[6-8]",names(plot_list),value=T)], ncol = 2))
-  print("Hit <Enter> to see the continew:")
+  readline("Hit <Enter> to see the continue:")
+  dev.off()
 }
 
 # plot_actual_data()
-# plot_predVSactual()
+plot_predVSactual()
