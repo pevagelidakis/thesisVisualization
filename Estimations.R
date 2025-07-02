@@ -51,25 +51,6 @@ colnames(data) <- c("L101_volume",    "L102_volume",    "L103_volume",    "L104_
                     "L107_occupancy", "L108_occupancy", "DAY",            "TIME")
 n_row = sum(data$DAY == data$DAY[1])*5
 settfm(data, DATE = fixDate(data$DAY,year=2000))
-# tsdata <- data %$% xts(cbind(L101_volume, L101_occupancy, L102_volume, L102_occupancy,
-#                              L103_volume, L103_occupancy, L104_volume, L104_occupancy,
-#                              L106_volume, L106_occupancy, L107_volume, L107_occupancy,
-#                              L108_volume, L108_occupancy),order.by = DATE, Frequency = n_row)
-# plot_list <- list()
-# for (loc in Filter(function(x) grepl("L10._volume",x), colnames(data))){
-#   df <- data[c(loc,"DATE")]
-#   names(df) <- c("Y1","DATE")
-#   plot_list[[loc]] <- ggplot(df, aes(x = DATE, y = Y1)) +
-#                           geom_line(color = "navyblue") +
-#                           labs(title = paste0("Plot of Traffic Volume of ",strsplit(loc,"_")[[1]][1]), x = "Date", y = "Volume") +
-#                           theme_minimal()
-# }
-# library(gridExtra)
-# num_plots <- length(plot_list)
-# num_cols <- 2  
-# num_rows <- ceiling(num_plots / num_cols)
-# dev.new()
-# grid.arrange(grobs = plot_list, nrow = num_rows, ncol = num_cols)
 
 # Construct the regressors respecting Fourier Harmonics. We need the first 500. 
 # High harmonic frequencies seems to have low impact.  
@@ -896,3 +877,119 @@ plotData_VIPs <- function(location, method, crit){
   return(dt)
 }
 
+
+plot_actual_data <- function(){
+  tsdata <- data %$% xts(cbind(L101_volume, L101_occupancy, L102_volume, L102_occupancy,
+                               L103_volume, L103_occupancy, L104_volume, L104_occupancy,
+                               L106_volume, L106_occupancy, L107_volume, L107_occupancy,
+                               L108_volume, L108_occupancy),order.by = DATE, Frequency = n_row)
+  
+  plot_list <- list()
+  for (loc in Filter(function(x) grepl("L10._volume",x), colnames(data))){
+    df <- data[c(loc,"DATE")]
+    names(df) <- c("Y1","DATE")
+    plot_list[[loc]] <- ggplot(df, aes(x = DATE, y = Y1)) +
+      geom_line(color = "navyblue") +
+      labs(title = paste0("Plot of Traffic Volume of ",strsplit(loc,"_")[[1]][1]), x = "Date", y = "Volume") +
+      theme_minimal()
+  }
+  library(gridExtra)
+  num_plots <- length(plot_list)
+  num_cols <- 2
+  num_rows <- ceiling(num_plots / num_cols)
+  dev.new()
+  grid.arrange(grobs = plot_list, nrow = num_rows, ncol = num_cols)
+  print("Hit <Enter> to continue:")
+  dev.off()
+}
+
+plot_predVSactual <- function(){
+  test_rows = (nrow(data)/2 +1) : (nrow(data)*3/4)
+  plot_list <- list()
+  coral_palette <- c(
+    "L1MTE (AIC)" = "firebrick",
+    "L1MTE (BIC)" = "#FF7F50",
+    "L2MTE (AIC)" = "#FFD700",
+    "L2MTE (BIC)" = "#808000",
+    "L1LSA (AIC)" = "#FF6347",
+    "L1LSA (BIC)" = "#BDB76B",
+    "L2LSA (AIC)" = "#FFA07A",
+    "L2LSA (BIC)" = "#556B2F"
+  )
+  line_sizes <- c(
+    "L1MTE (AIC)" = 1.5,
+    "L1MTE (BIC)" = 1.2,
+    "L2MTE (AIC)" = 1,
+    "L2MTE (BIC)" = 1,
+    "L1LSA (AIC)" = 1,
+    "L1LSA (BIC)" = 1,
+    "L2LSA (AIC)" = 1,
+    "L2LSA (BIC)" = 1
+  )
+  for (loc in sapply(routes, function(x) sub("_volume","\\1",x))){
+    envir = new.env()
+    load(paste0(loc,"/coef_L1MTE.RData"), envir = envir)
+    load(paste0(loc,"/coef_L2MTE.RData"), envir = envir)
+    load(paste0(loc,"/coef_L1LSA.RData"), envir = envir)
+    load(paste0(loc,"/coef_L2LSA.RData"), envir = envir)
+    coef_L1MTE_AIC = envir$coef_L1MTE$AIC
+    coef_L1MTE_BIC = envir$coef_L1MTE$BIC
+    coef_L2MTE_AIC = envir$coef_L2MTE$AIC
+    coef_L2MTE_BIC = envir$coef_L2MTE$BIC
+    coef_L1LSA_AIC = envir$coef_L1LSA$AIC
+    coef_L1LSA_BIC = envir$coef_L1LSA$BIC
+    coef_L2LSA_AIC = envir$coef_L2LSA$AIC
+    coef_L2LSA_BIC = envir$coef_L2LSA$BIC
+    rm(envir)
+    
+    df_long <- df %>%
+      pivot_longer(
+        cols = starts_with("fitted_"),
+        names_to = "model",
+        values_to = "fitted"
+      ) %>%
+      mutate(
+        model = case_when(
+          model == "fitted_L1MTE_AIC" ~ "L1MTE (AIC)",
+          model == "fitted_L1MTE_BIC" ~ "L1MTE (BIC)",
+          model == "fitted_L2MTE_AIC" ~ "L2MTE (AIC)",
+          model == "fitted_L2MTE_BIC" ~ "L2MTE (BIC)",
+          model == "fitted_L1LSA_AIC" ~ "L1LSA (AIC)",
+          model == "fitted_L1LSA_BIC" ~ "L1LSA (BIC)",
+          model == "fitted_L2LSA_AIC" ~ "L2LSA (AIC)",
+          model == "fitted_L2LSA_BIC" ~ "L2LSA (BIC)"
+        )
+      )  %>%
+      mutate(model = factor(model, levels = c(
+        "L1MTE (AIC)", "L1MTE (BIC)",
+        "L2MTE (AIC)", "L2MTE (BIC)",
+        "L1LSA (AIC)", "L1LSA (BIC)",
+        "L2LSA (AIC)", "L2LSA (BIC)"
+      )))
+    p <- ggplot() +
+      geom_line(data = df, aes(x = Date, y = Volume), color = "steelblue", size = 1.1) +
+      geom_line(data = df_long, aes(x = Date, y = fitted, color = model, size = model),
+                linetype = "dashed", alpha = 0.9) +
+      scale_color_manual(name = "Model", values = coral_palette) +
+      scale_size_manual(values = line_sizes, guide = "none") +
+      theme_minimal(base_size = 14) +
+      labs(
+        title = "Profile Forecast vs Original Data",
+        subtitle = paste("Traffic volume on", loc, "location"),
+        x = "Date", y = "Traffic Volume"
+      ) +
+      theme(
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(color = "gray40"),
+        legend.position = "bottom"
+      )
+    plot_list[[loc]] <- p 
+  }
+  do.call(grid.arrange, c(plot_list[grep("L10[1-4]",names(plot_list),value=T)], ncol = 2))
+  print("Hit <Enter> to see the next plots:")
+  do.call(grid.arrange, c(plot_list[grep("L10[6-8]",names(plot_list),value=T)], ncol = 2))
+  print("Hit <Enter> to see the continew:")
+}
+
+# plot_actual_data()
+# plot_predVSactual()

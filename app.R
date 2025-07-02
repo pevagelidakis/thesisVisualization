@@ -1,3 +1,5 @@
+library(tidyr)
+library(ggplot2)
 library(shiny)
 library(shinydashboard)
 library(plotly)
@@ -10,7 +12,121 @@ library(dplyr)
 library(tseries)
 library(DT)
 source("Estimations.R")
+library(gridExtra)
 
+plot_Initial_data <- function(){
+  tsdata <- data %$% xts(cbind(L101_volume, L101_occupancy, L102_volume, L102_occupancy,
+                               L103_volume, L103_occupancy, L104_volume, L104_occupancy,
+                               L106_volume, L106_occupancy, L107_volume, L107_occupancy,
+                               L108_volume, L108_occupancy),order.by = DATE, Frequency = n_row)
+  
+  plot_list <- list()
+  for (loc in Filter(function(x) grepl("L10._volume",x), colnames(data))){
+    df <- data[c(loc,"DATE")]
+    names(df) <- c("Y1","DATE")
+    plot_list[[loc]] <- ggplot(df, aes(x = DATE, y = Y1)) +
+      geom_line(color = "navyblue") +
+      labs(title = paste0("Plot of Traffic Volume of ",strsplit(loc,"_")[[1]][1]), x = "Date", y = "Volume") +
+      theme_minimal()
+  }
+  library(gridExtra)
+  num_plots <- length(plot_list)
+  num_cols <- 2
+  num_rows <- ceiling(num_plots / num_cols)
+  dev.new()
+  grid.arrange(grobs = plot_list, nrow = num_rows, ncol = num_cols)
+  print("Hit <Enter> to continue:")
+  dev.off()
+}
+
+plot_Forecasts_Vs_Initial_data <- function(){
+  test_rows = (nrow(data)/2 +1) : (nrow(data)*3/4)
+  plot_list <- list()
+  coral_palette <- c(
+    "L1MTE (AIC)" = "firebrick",
+    "L1MTE (BIC)" = "#FF7F50",
+    "L2MTE (AIC)" = "#FFD700",
+    "L2MTE (BIC)" = "#808000",
+    "L1LSA (AIC)" = "#FF6347",
+    "L1LSA (BIC)" = "#BDB76B",
+    "L2LSA (AIC)" = "#FFA07A",
+    "L2LSA (BIC)" = "#556B2F"
+  )
+  line_sizes <- c(
+    "L1MTE (AIC)" = 1.5,
+    "L1MTE (BIC)" = 1.2,
+    "L2MTE (AIC)" = 1,
+    "L2MTE (BIC)" = 1,
+    "L1LSA (AIC)" = 1,
+    "L1LSA (BIC)" = 1,
+    "L2LSA (AIC)" = 1,
+    "L2LSA (BIC)" = 1
+  )
+  for (loc in sapply(routes, function(x) sub("_volume","\\1",x))){
+    envir = new.env()
+    load(paste0(loc,"/coef_L1MTE.RData"), envir = envir)
+    load(paste0(loc,"/coef_L2MTE.RData"), envir = envir)
+    load(paste0(loc,"/coef_L1LSA.RData"), envir = envir)
+    load(paste0(loc,"/coef_L2LSA.RData"), envir = envir)
+    coef_L1MTE_AIC = envir$coef_L1MTE$AIC
+    coef_L1MTE_BIC = envir$coef_L1MTE$BIC
+    coef_L2MTE_AIC = envir$coef_L2MTE$AIC
+    coef_L2MTE_BIC = envir$coef_L2MTE$BIC
+    coef_L1LSA_AIC = envir$coef_L1LSA$AIC
+    coef_L1LSA_BIC = envir$coef_L1LSA$BIC
+    coef_L2LSA_AIC = envir$coef_L2LSA$AIC
+    coef_L2LSA_BIC = envir$coef_L2LSA$BIC
+    rm(envir)
+    
+    df_long <- df %>%
+      pivot_longer(
+        cols = starts_with("fitted_"),
+        names_to = "model",
+        values_to = "fitted"
+      ) %>%
+      mutate(
+        model = case_when(
+          model == "fitted_L1MTE_AIC" ~ "L1MTE (AIC)",
+          model == "fitted_L1MTE_BIC" ~ "L1MTE (BIC)",
+          model == "fitted_L2MTE_AIC" ~ "L2MTE (AIC)",
+          model == "fitted_L2MTE_BIC" ~ "L2MTE (BIC)",
+          model == "fitted_L1LSA_AIC" ~ "L1LSA (AIC)",
+          model == "fitted_L1LSA_BIC" ~ "L1LSA (BIC)",
+          model == "fitted_L2LSA_AIC" ~ "L2LSA (AIC)",
+          model == "fitted_L2LSA_BIC" ~ "L2LSA (BIC)"
+        )
+      )  %>%
+      mutate(model = factor(model, levels = c(
+        "L1MTE (AIC)", "L1MTE (BIC)",
+        "L2MTE (AIC)", "L2MTE (BIC)",
+        "L1LSA (AIC)", "L1LSA (BIC)",
+        "L2LSA (AIC)", "L2LSA (BIC)"
+      )))
+    p <- ggplot() +
+      geom_line(data = df, aes(x = Date, y = Volume), color = "steelblue", size = 1.1) +
+      geom_line(data = df_long, aes(x = Date, y = fitted, color = model, size = model),
+                linetype = "dashed", alpha = 0.9) +
+      scale_color_manual(name = "Model", values = coral_palette) +
+      scale_size_manual(values = line_sizes, guide = "none") +
+      theme_minimal(base_size = 14) +
+      labs(
+        title = "Profile Forecast vs Original Data",
+        subtitle = paste("Traffic volume on", loc, "location"),
+        x = "Date", y = "Traffic Volume"
+      ) +
+      theme(
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(color = "gray40"),
+        legend.position = "bottom"
+      )
+    plot_list[[loc]] <- p 
+  }
+  return(plot_list)
+  # do.call(grid.arrange, c(plot_list[grep("L10[1-4]",names(plot_list),value=T)], ncol = 2))
+  # print("Hit <Enter> to see the next plots:")
+  # do.call(grid.arrange, c(plot_list[grep("L10[6-8]",names(plot_list),value=T)], ncol = 2))
+  # print("Hit <Enter> to see the continew:")
+}
 loop.detect <- as.vector(sapply(routes, function(x) strsplit(x, "_")[[1]][1]))
 app_methods <- c("MTE", "LSA")
 criteria <- c("AIC", "BIC")
@@ -122,6 +238,7 @@ ui <- fluidPage(
         menuItem("Analysis Plots", tabName = "plots", icon = icon("chart-line")),
         menuItem("Coeficients: MEB against Initial data ", tabName = "MEB_vs_ACTUAL", icon = icon("balance-scale")),
         menuItem("Coeficients: Location-Wise", tabName = "locationWise", icon = icon("compass")),
+        menuItem("Location-Wise Forecast Comparison", tabName = "locationWise_forecast", icon = icon("search")),
         menuItem("Variable Importance", tabName = "vips", icon = icon("ranking-star")),
         menuItem("Normality and Stationarity Tests", tabName = "validation_tab", icon = icon("vial")),
         menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot"))#,
@@ -345,7 +462,7 @@ ui <- fluidPage(
                 fluidRow(
                   box(
                     title = textOutput("locationWise_title"), 
-                    status = "info", 
+                    status = "primary", 
                     solidHeader = TRUE, width = 12,
                     radioButtons("data_source", "Select which coefficients to see:",
                                  choices = c("Average from MEB data", "From Initial Data", "Post-hoc Adaptive L1 Lasso on Initial Data"),
@@ -353,6 +470,17 @@ ui <- fluidPage(
                                  inline = TRUE),
                     hr(), 
                     plotlyOutput("locationWise_plot", height = "600px")
+                  )
+                )
+        ),
+        tabItem("locationWise_forecast",
+                fluidRow(
+                  box(
+                    title = textOutput("locationWise_forecast_title"), 
+                    status = "primary", 
+                    solidHeader = TRUE, width = 12,
+                    hr(), 
+                    plotlyOutput("locationWise_forecast_plot", height = "600px")
                   )
                 )
         ),
@@ -506,6 +634,18 @@ server <- function(input, output, session) {
       
     }, error = function(e) {
       showNotification(paste("Location-wise Coef Data Error:", e$message), type = "error", duration = 10)
+      NULL 
+    })
+  })
+  
+  reactive_plotData_loc_forecast  <- reactive({
+    req(input$route) 
+    
+    tryCatch({
+      data2plot <- plot_Forecasts_Vs_Initial_data()
+      return(data2plot[[input$route]])
+    }, error = function(e) {
+      showNotification(paste("Location-wise Forecast Data Error:", e$message), type = "error", duration = 10)
       NULL 
     })
   })
@@ -1080,6 +1220,16 @@ server <- function(input, output, session) {
     paste(input$plot_type, "for Detector:", input$route) 
   })
   
+  output$locationWise_forecast_title <- renderText({
+    req(input$route)
+    paste("Forecast daily profiles on location", input$route) 
+  })
+  
+  output$locationWise_title <- renderText({
+    req(input$route)
+    paste("Locationwise visualization of coefficients from the performed methods", input$rotue) 
+  })
+  
   output$comparison_plot <- renderPlotly({
     df <- plotData_meb(
       location = paste0(input$route, "_volume"),
@@ -1224,6 +1374,19 @@ server <- function(input, output, session) {
     })
   })
   
+  output$locationWise_forecast_plot <- renderPlotly({
+    df <- reactive_plotData_loc_forecast() 
+    req(df) 
+    tryCatch({
+      return(df)
+    }, error = function(e) {
+      # --- Error Handling ---
+      showNotification(paste("Location Plot Error:", e$message), type = "error", duration = 10)
+      plot_ly() |> layout(title = "Error Generating Location Plot",
+                          annotations = list(text = paste("Details:", e$message), showarrow = FALSE))
+    })
+  })
+  
   output$vip_title <- renderText({
     req(input$route)
     paste("Variable Importance (VIP) Scores for Detector:", input$route)
@@ -1325,4 +1488,8 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 # library(getip)
-# runApp("shinyApp.R",host = "139.91.62.83",port = 1997) # IPv4 Address. 192.168.1.22. the uoc server is 147.52.205.205
+## For Windows
+# ip_info <- system("ipconfig", intern = TRUE)
+# ipv4_line <- grep("IPv4 Address", ip_info, value = TRUE)
+# ipv4_address <- gsub(".*: (.*)", "\\1", ipv4_line)
+# runApp("app.R",host = ipv4_address[1],port = 1997) # IPv4 Address. 192.168.1.22. the uoc server is 147.52.205.205
