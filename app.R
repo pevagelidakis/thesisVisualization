@@ -241,8 +241,8 @@ ui <- fluidPage(
         menuItem("Location-Wise Forecast Comparison", tabName = "locationWise_forecast", icon = icon("search")),
         menuItem("Variable Importance", tabName = "vips", icon = icon("ranking-star")),
         menuItem("Normality and Stationarity Tests", tabName = "validation_tab", icon = icon("vial")),
-        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot"))#,
-        # menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
+        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot")),
+        menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
       )
     ),
     dashboardBody(
@@ -1487,8 +1487,7 @@ server <- function(input, output, session) {
 
 shinyApp(ui = ui, server = server)
 
-# library(getip)
-## For Windows
+# If you want to run the application, please paste the following in your console.
 # ip_info <- system("ipconfig", intern = TRUE)
 # ipv4_line <- grep("IPv4 Address", ip_info, value = TRUE)
 # ipv4_address <- gsub(".*: (.*)", "\\1", ipv4_line)
