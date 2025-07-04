@@ -68,15 +68,28 @@ plot_Forecasts_Vs_Initial_data <- function(){
     load(paste0(loc,"/coef_L2MTE.RData"), envir = envir)
     load(paste0(loc,"/coef_L1LSA.RData"), envir = envir)
     load(paste0(loc,"/coef_L2LSA.RData"), envir = envir)
-    coef_L1MTE_AIC = envir$coef_L1MTE$AIC
-    coef_L1MTE_BIC = envir$coef_L1MTE$BIC
-    coef_L2MTE_AIC = envir$coef_L2MTE$AIC
-    coef_L2MTE_BIC = envir$coef_L2MTE$BIC
-    coef_L1LSA_AIC = envir$coef_L1LSA$AIC
-    coef_L1LSA_BIC = envir$coef_L1LSA$BIC
-    coef_L2LSA_AIC = envir$coef_L2LSA$AIC
-    coef_L2LSA_BIC = envir$coef_L2LSA$BIC
+    coef_L1MTE_AIC = rowMeans(envir$coef_L1MTE$AIC)
+    coef_L1MTE_BIC = rowMeans(envir$coef_L1MTE$BIC)
+    coef_L2MTE_AIC = rowMeans(envir$coef_L2MTE$AIC)
+    coef_L2MTE_BIC = rowMeans(envir$coef_L2MTE$BIC)
+    coef_L1LSA_AIC = rowMeans(envir$coef_L1LSA$AIC)
+    coef_L1LSA_BIC = rowMeans(envir$coef_L1LSA$BIC)
+    coef_L2LSA_AIC = rowMeans(envir$coef_L2LSA$AIC)
+    coef_L2LSA_BIC = rowMeans(envir$coef_L2LSA$BIC)
     rm(envir)
+    
+    df = data.frame(
+      Volume           = data[[paste0(loc,"_volume")]][test_rows],
+      Date             = data$DATE[test_rows],
+      fitted_L1MTE_AIC = as.numeric(coef_L1MTE_AIC %*% t(X[test_rows,])),
+      fitted_L1MTE_BIC = as.numeric(coef_L1MTE_BIC %*% t(X[test_rows,])),
+      fitted_L2MTE_AIC = as.numeric(coef_L2MTE_AIC %*% t(X[test_rows,])),
+      fitted_L2MTE_BIC = as.numeric(coef_L2MTE_BIC %*% t(X[test_rows,])),
+      fitted_L1LSA_AIC = as.numeric(coef_L1LSA_AIC %*% t(X[test_rows,])),
+      fitted_L1LSA_BIC = as.numeric(coef_L1LSA_BIC %*% t(X[test_rows,])),
+      fitted_L2LSA_AIC = as.numeric(coef_L2LSA_AIC %*% t(X[test_rows,])),
+      fitted_L2LSA_BIC = as.numeric(coef_L2LSA_BIC %*% t(X[test_rows,]))
+    )
     
     df_long <- df %>%
       pivot_longer(
@@ -103,7 +116,7 @@ plot_Forecasts_Vs_Initial_data <- function(){
         "L2LSA (AIC)", "L2LSA (BIC)"
       )))
     p <- ggplot() +
-      geom_line(data = df, aes(x = Date, y = Volume), color = "steelblue", size = 1.1) +
+      geom_line(data = df, aes(x = Date, y = Volume), color = "gray70", size = 1.1) +
       geom_line(data = df_long, aes(x = Date, y = fitted, color = model, size = model),
                 linetype = "dashed", alpha = 0.9) +
       scale_color_manual(name = "Model", values = coral_palette) +
@@ -242,7 +255,7 @@ ui <- fluidPage(
         menuItem("Variable Importance", tabName = "vips", icon = icon("ranking-star")),
         menuItem("Normality and Stationarity Tests", tabName = "validation_tab", icon = icon("vial")),
         menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot")),
-        menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
+        # menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
       )
     ),
     dashboardBody(
