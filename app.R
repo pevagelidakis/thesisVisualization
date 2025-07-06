@@ -78,6 +78,7 @@ plot_Forecasts_Vs_Initial_data <- function(){
     coef_L2LSA_BIC = rowMeans(envir$coef_L2LSA$BIC)
     rm(envir)
     
+    test_rows = (nrow(data)*0.5+1):(nrow(data)*0.75)
     df = data.frame(
       Volume           = data[[paste0(loc,"_volume")]][test_rows],
       Date             = data$DATE[test_rows],
@@ -90,7 +91,6 @@ plot_Forecasts_Vs_Initial_data <- function(){
       fitted_L2LSA_AIC = as.numeric(coef_L2LSA_AIC %*% t(X[test_rows,])),
       fitted_L2LSA_BIC = as.numeric(coef_L2LSA_BIC %*% t(X[test_rows,]))
     )
-    
     df_long <- df %>%
       pivot_longer(
         cols = starts_with("fitted_"),
@@ -116,7 +116,7 @@ plot_Forecasts_Vs_Initial_data <- function(){
         "L2LSA (AIC)", "L2LSA (BIC)"
       )))
     p <- ggplot() +
-      geom_line(data = df, aes(x = Date, y = Volume), color = "gray70", size = 1.1) +
+      geom_line(data = df, aes(x = Date, y = Volume), color = "steelblue", size = 1.1) +
       geom_line(data = df_long, aes(x = Date, y = fitted, color = model, size = model),
                 linetype = "dashed", alpha = 0.9) +
       scale_color_manual(name = "Model", values = coral_palette) +
@@ -172,7 +172,7 @@ extract_coef_helper <- function(extract = c("Mean", "2.5q", "97.5q","Median"),co
           if (coef_=="MEB") {apply(plotData_meb(loc,c(as.logical(x[1]),as.logical(x[2])),x[3],show_ ="Coefficients")[,-21],1,function(z) func(z,extract))}
           else if (coef_=="Actual") {plotData(loc,c(as.logical(x[1]),as.logical(x[2])),x[3],F,show_ ="Coefficients")[,gsub("_volume","",loc)]}
           else {plotData(loc,c(as.logical(x[1]),as.logical(x[2])),x[3],T,show_ ="Coefficients")[,1]}
-          }),
+        }),
       "Predictor" = coeff_names)
     res <- res %>%
       arrange(across(1:(length(res)-1), ~ desc(.)))
@@ -189,7 +189,7 @@ extract_coef <-function(loc){
   act       <- extract_coef_helper("","Actual")[[loc]]
   adl1lasso <- extract_coef_helper("","ADL1LASSO")[[loc]]
   adl1lasso <- adl1lasso[adl1lasso$Predictor %in% act$Predictor,]
-
+  
   columnNames <- colnames(Mmean)
   numCols <-  length(columnNames)
   dfs <- list(Mmean, Mmed, M97.5, M2.5, act, adl1lasso)
@@ -254,7 +254,7 @@ ui <- fluidPage(
         menuItem("Location-Wise Forecast Comparison", tabName = "locationWise_forecast", icon = icon("search")),
         menuItem("Variable Importance", tabName = "vips", icon = icon("ranking-star")),
         menuItem("Normality and Stationarity Tests", tabName = "validation_tab", icon = icon("vial")),
-        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot")),
+        menuItem("Detector Map", tabName = "map", icon = icon("map-location-dot"))#,
         # menuItem("Detailed Report (PDF)", tabName = "pdf", icon = icon("file-alt", class = "fas"))
       )
     ),
@@ -1127,7 +1127,7 @@ server <- function(input, output, session) {
     # Arrange all plots in a grid
     subplot(plots_list, nrows = ceiling(length(plots_list)/4), margin = 0.02, shareX = TRUE, shareY = FALSE, titleY = TRUE) %>%
       layout(title = "ACF and PACF Plots for Residuals and Prediction Errors")  
-    })
+  })
   
   output$plot_title <- renderText({
     req(input$plot_type, input$route)
